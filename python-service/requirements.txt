@@ -1,0 +1,16 @@
+# FastAPI and server
+fastapi==0.109.0
+uvicorn[standard]==0.27.0
+
+# OpenAI API client
+openai>=2.8.0
+
+# Validation and data models
+pydantic==2.5.3
+
+# Environment variable management
+python-dotenv==1.0.0
+
+# E2B sandbox for code execution
+e2b>=0.1.0
+

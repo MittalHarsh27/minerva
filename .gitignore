@@ -4,4 +4,5 @@ dist/
 .env
 .DS_Store
 
-
+# Python virtual environment
+python-service/venv/

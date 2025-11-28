@@ -1,6 +1,9 @@
 // API base URL
 const API_BASE = 'http://localhost:3001';
 
+// Authentication state
+let isAuthenticated = false;
+
 // State
 let currentSessionId = null;
 let lastQuery = null;
@@ -22,6 +25,13 @@ const typewriterMessages = [
 
 // Initialize the app
 function init() {
+  // Check authentication first
+  checkAuth();
+  
+  if (!isAuthenticated) {
+    return; // Will redirect to login page
+  }
+  
   setupEventListeners();
   startTypewriter();
 }
@@ -52,6 +62,18 @@ function setupEventListeners() {
       // Menu functionality can be added here in the future
     });
   });
+
+  // Logout button
+  const logoutBtn = document.getElementById('logoutBtn');
+  if (logoutBtn) {
+    logoutBtn.addEventListener('click', () => {
+      // Clear authentication
+      localStorage.removeItem('authToken');
+      localStorage.removeItem('rememberMe');
+      // Redirect to login page
+      window.location.href = '/login.html';
+    });
+  }
 
   // Get Started button (landing page)
   const getStartedBtn = document.getElementById('getStartedBtn');
@@ -364,6 +386,23 @@ async function fetchAndDisplayWidget(sessionId) {
 
 // Display questions as flashcards (one at a time)
 function displayQuestionFlashcards(questions, sessionId) {
+  // Validate and store sessionId
+  if (!sessionId) {
+    sessionId = currentSessionId || window.currentSessionId;
+    if (!sessionId) {
+      console.error('displayQuestionFlashcards: No sessionId provided');
+      addError('Failed to display questions: Session ID is missing');
+      return;
+    }
+  }
+  
+  // Store sessionId in multiple places for reliability
+  const flashcardSessionId = sessionId;
+  currentSessionId = sessionId;
+  window.currentSessionId = sessionId;
+  
+  console.log('displayQuestionFlashcards called with sessionId:', flashcardSessionId);
+  
   const chatContainer = document.getElementById('chatContainer');
   
   // Create flashcard container
@@ -372,12 +411,12 @@ function displayQuestionFlashcards(questions, sessionId) {
   flashcardContainer.innerHTML = `
     <div class="avatar assistant">AI</div>
     <div class="message-content">
-      <div class="flashcard-container" id="flashcardContainer-${sessionId}"></div>
+      <div class="flashcard-container" id="flashcardContainer-${flashcardSessionId}"></div>
     </div>
   `;
   chatContainer.appendChild(flashcardContainer);
   
-  const container = flashcardContainer.querySelector(`#flashcardContainer-${sessionId}`);
+  const container = flashcardContainer.querySelector(`#flashcardContainer-${flashcardSessionId}`);
   let currentQuestionIndex = 0;
   const selectedAnswers = {};
   
@@ -385,7 +424,15 @@ function displayQuestionFlashcards(questions, sessionId) {
   function showQuestion(index) {
     if (index >= questions.length) {
       // All questions answered, submit
-      submitFlashcardAnswers(sessionId, selectedAnswers);
+      // Use the stored sessionId from closure
+      const finalSessionId = flashcardSessionId || currentSessionId || window.currentSessionId;
+      console.log('Submitting answers with sessionId:', finalSessionId, 'selectedAnswers:', selectedAnswers);
+      if (!finalSessionId) {
+        console.error('No sessionId available when submitting answers');
+        addError('Failed to submit answers: Session ID is missing');
+        return;
+      }
+      submitFlashcardAnswers(finalSessionId, selectedAnswers);
       return;
     }
     
@@ -401,7 +448,7 @@ function displayQuestionFlashcards(questions, sessionId) {
         <div class="flashcard-answers">
           ${question.answers.map((answer, ansIndex) => `
             <button class="flashcard-answer-btn" 
-                    data-session-id="${sessionId}"
+                    data-session-id="${flashcardSessionId}"
                     data-question-index="${index}"
                     data-question-id="${question.id}"
                     data-answer-index="${ansIndex}"
@@ -417,11 +464,13 @@ function displayQuestionFlashcards(questions, sessionId) {
     const buttons = container.querySelectorAll('.flashcard-answer-btn');
     buttons.forEach(button => {
       button.addEventListener('click', function() {
-        const sessionId = this.dataset.sessionId;
+        // Get sessionId from button data or use closure value
+        const btnSessionId = this.dataset.sessionId || flashcardSessionId || currentSessionId || window.currentSessionId;
         const questionIndex = parseInt(this.dataset.questionIndex);
         const questionId = this.dataset.questionId;
         const answer = this.dataset.answer;
-        selectFlashcardAnswer(sessionId, questionIndex, questionId, answer, this);
+        console.log('Answer button clicked:', { btnSessionId, questionIndex, questionId, answer });
+        selectFlashcardAnswer(btnSessionId, questionIndex, questionId, answer, this);
       });
     });
     
@@ -458,6 +507,27 @@ function displayQuestionFlashcards(questions, sessionId) {
 
 // Submit flashcard answers
 async function submitFlashcardAnswers(sessionId, answers) {
+  console.log('submitFlashcardAnswers called with:', { sessionId, answers, currentSessionId, windowSessionId: window.currentSessionId });
+  
+  // Validate sessionId
+  if (!sessionId) {
+    console.error('sessionId is undefined! Trying fallbacks...', { 
+      sessionId, 
+      currentSessionId, 
+      windowSessionId: window.currentSessionId 
+    });
+    // Try to get from global state
+    sessionId = currentSessionId || window.currentSessionId;
+    if (!sessionId) {
+      console.error('All sessionId fallbacks failed!');
+      addError('Failed to submit answers: Session ID is missing');
+      updateStatus('Error', 'error');
+      return;
+    }
+    console.log('Using fallback sessionId:', sessionId);
+  }
+  
+  console.log('Submitting with final sessionId:', sessionId);
   updateStatus('Submitting answers...', 'loading');
   
   try {
@@ -471,6 +541,11 @@ async function submitFlashcardAnswers(sessionId, answers) {
         answers: answers
       })
     });
+    
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
+    }
     
     const result = await response.json();
     
@@ -499,18 +574,18 @@ function handleAnswersSubmitted(sessionId, answers, result) {
     const error = result.error;
     
     if (error) {
-      addSearchResults(null, error);
+      addSearchResults(null, error, sessionId);
       updateStatus('Search failed', 'error');
     } else {
-      addSearchResults(searchResults);
+      addSearchResults(searchResults, null, sessionId);
       updateStatus('Search completed', 'success');
       
       // Show results in overlay
-      showResultsOverlay(searchResults);
+      showResultsOverlay(searchResults, sessionId);
     }
   } else {
     const errorMessage = result?.error || result?.message || 'Search failed';
-    addSearchResults(null, errorMessage);
+    addSearchResults(null, errorMessage, sessionId);
     updateStatus('Search failed', 'error');
   }
   
@@ -616,7 +691,17 @@ function retryLastQuery() {
 }
 
 // Display results as flashcards (one at a time)
-function displayResultFlashcards(searchResults, error = null) {
+function displayResultFlashcards(searchResults, error = null, sessionId = null) {
+  // Get sessionId from parameter or fallback to global state
+  if (!sessionId) {
+    sessionId = currentSessionId || window.currentSessionId;
+  }
+  
+  if (!sessionId) {
+    console.error('displayResultFlashcards: No sessionId available');
+    sessionId = 'unknown'; // Fallback to prevent template errors
+  }
+  
   const chatContainer = document.getElementById('chatContainer');
   
   if (error) {
@@ -818,13 +903,23 @@ function showResultsSummary(likedResults, dislikedResults) {
 }
 
 // Add search results to chat (legacy - keeping for compatibility)
-function addSearchResults(searchResults, error = null) {
+function addSearchResults(searchResults, error = null, sessionId = null) {
+  // Get sessionId from parameter or fallback to global state
+  if (!sessionId) {
+    sessionId = currentSessionId || window.currentSessionId;
+  }
+  
+  displayResultFlashcards(searchResults, error, sessionId);
   // Use new flashcard display
   displayResultFlashcards(searchResults, error);
 }
 
 // Show results overlay
-function showResultsOverlay(searchResults) {
+function showResultsOverlay(searchResults, sessionId = null) {
+  // Get sessionId from parameter or fallback to global state
+  if (!sessionId) {
+    sessionId = currentSessionId || window.currentSessionId;
+  }
   const overlay = document.getElementById('resultsOverlay');
   const resultDisplay = document.getElementById('resultDisplay');
   
@@ -927,7 +1022,21 @@ window.addEventListener('beforeunload', () => {
   stopTypewriter();
 });
 
-// Initialize when DOM is ready
+// Check if user is already logged in (from localStorage)
+function checkAuth() {
+  const authToken = localStorage.getItem('authToken');
+  
+  // Simply check if auth token exists
+  if (!authToken) {
+    // User is not logged in, redirect to login page
+    window.location.href = '/login.html';
+    return;
+  }
+  
+  isAuthenticated = true;
+}
+
+// Initialize app when DOM is loaded
 if (document.readyState === 'loading') {
   document.addEventListener('DOMContentLoaded', init);
 } else {

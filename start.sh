@@ -1,9 +1,24 @@
 #!/bin/bash
 
+# ============================================================================
+# Q&A Recommendation Service Startup Script
+# ============================================================================
+# This script starts both the Python FastAPI service (port 8000) and 
+# the Node.js Express server (port 3001).
+#
+# To start services manually:
+#   Python Service: cd python-service && ./venv/bin/python3 -m uvicorn main:app --host 0.0.0.0 --port 8000
+#   Node.js Service: npm start (or: npm run dev)
+#
+# To stop services: ./kill.sh
+# To restart services: ./restart.sh
+# ============================================================================
+
 # Colors for output
 GREEN='\033[0;32m'
 BLUE='\033[0;34m'
 YELLOW='\033[1;33m'
+RED='\033[0;31m'
 NC='\033[0m' # No Color
 
 echo -e "${BLUE}🚀 Starting Q&A Recommendation Service${NC}\n"
@@ -48,8 +63,10 @@ echo -e "${GREEN}✅ Dependencies ready!${NC}\n"
 
 # Start Python service in background
 echo -e "${BLUE}🐍 Starting Python service on port 8000...${NC}"
+echo -e "${YELLOW}   Command: cd python-service && ./venv/bin/python3 -m uvicorn main:app --host 0.0.0.0 --port 8000${NC}"
 cd python-service
-python3 -m uvicorn main:app --host 0.0.0.0 --port 8000 &
+# Use venv's python directly
+./venv/bin/python3 -m uvicorn main:app --host 0.0.0.0 --port 8000 &
 PYTHON_PID=$!
 cd ..
 
@@ -65,6 +82,7 @@ fi
 
 # Start Express server
 echo -e "${BLUE}🚀 Starting Express server on port 3001...${NC}"
+echo -e "${YELLOW}   Command: npm start${NC}"
 echo -e "${GREEN}📱 Open http://localhost:3001 in your browser${NC}\n"
 
 # Trap to kill Python process on exit

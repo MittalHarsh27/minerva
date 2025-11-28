@@ -3,5 +3,9 @@ dist/
 *.log
 .env
 .DS_Store
+start.sh
+kill.sh
+restart.sh
 
-
+# Python virtual environment
+python-service/venv/

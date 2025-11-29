@@ -38,18 +38,47 @@ function displayQuestionFlashcards(questions, sessionId) {
   let currentQuestionIndex = 0;
   const selectedAnswers = {};
 
-  // Function to show current question
+  // Function to show current question (or answer summary when done)
   function showQuestion(index) {
     if (index >= questions.length) {
-      // All questions answered, submit
-      // Use the stored sessionId from closure
+      // All questions answered – show a summary flashcard of selections
       const finalSessionId = flashcardSessionId || currentSessionId || window.currentSessionId;
-      console.log('Submitting answers with sessionId:', finalSessionId, 'selectedAnswers:', selectedAnswers);
+      console.log('All questions answered for session:', finalSessionId, 'selectedAnswers:', selectedAnswers);
+
       if (!finalSessionId) {
         console.error('No sessionId available when submitting answers');
         addError('Failed to submit answers: Session ID is missing');
         return;
       }
+
+      // Build summary list of questions and chosen answers
+      const summaryItems = questions
+        .map((q, i) => {
+          const chosen = selectedAnswers[q.id];
+          const safeQuestion = escapeHtml(q.text || `Question ${i + 1}`);
+          const safeAnswer = chosen ? escapeHtml(chosen) : '<span style="opacity:0.7;">No answer selected</span>';
+          return `
+            <div class="qa-summary-item">
+              <div class="qa-summary-question">${safeQuestion}</div>
+              <div class="qa-summary-answer">${safeAnswer}</div>
+            </div>
+          `;
+        })
+        .join('');
+
+      container.innerHTML = `
+        <div class="question-flashcard active qa-summary-flashcard">
+          <div class="flashcard-progress">Review your answers</div>
+          <div class="flashcard-question">
+            <h3>Your selections</h3>
+          </div>
+          <div class="qa-summary-list">
+            ${summaryItems}
+          </div>
+        </div>
+      `;
+
+      // Submit answers in the background after showing the summary
       submitFlashcardAnswers(finalSessionId, selectedAnswers);
       return;
     }

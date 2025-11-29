@@ -504,6 +504,37 @@ body {
   position: relative;
 }
 
+/* Answer summary flashcard (after all questions answered) */
+.qa-summary-flashcard {
+  max-width: 600px;
+}
+
+.qa-summary-list {
+  margin-top: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.qa-summary-item {
+  padding: 12px 16px;
+  border-radius: 12px;
+  background: var(--claude-hover);
+  border: 1px solid var(--claude-border);
+}
+
+.qa-summary-question {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--claude-text);
+  margin-bottom: 4px;
+}
+
+.qa-summary-answer {
+  font-size: 14px;
+  color: #6B675F;
+}
+
 @keyframes slideInCard {
   from {
     opacity: 0;

@@ -49,29 +49,6 @@ def get_question_user_prompt(
     )
 
 
-def remove_markdown_code_blocks(content: str) -> str:
-    """
-    Remove markdown code blocks from content.
-
-    Handles cases where content is wrapped in ```json or ``` code blocks.
-
-    Args:
-        content: Raw content that may contain markdown code blocks
-
-    Returns:
-        Content with markdown code blocks removed
-    """
-    content = content.strip()
-    # Remove markdown code blocks if present
-    if content.startswith("```json"):
-        content = content[7:]  # Remove ```json
-    elif content.startswith("```"):
-        content = content[3:]  # Remove ```
-    if content.endswith("```"):
-        content = content[:-3]  # Remove closing ```
-    return content.strip()
-
-
 def inline_schema_defs(json_schema: dict[str, Any]) -> dict[str, Any]:
     """
     Inline schema definitions from $defs into the main schema.

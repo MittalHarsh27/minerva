@@ -65,7 +65,6 @@ jobs:
 
       - name: Setup Python 3.9
         if: steps.check_python.outputs.python_changed == 'true'
-      - name: Setup Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.9'
@@ -81,14 +80,11 @@ jobs:
         working-directory: python-service
         run: python -m venv venv
 
-      - name: Activate virtual environment and install dependencies
+      - name: Install dependencies
         if: steps.check_python.outputs.python_changed == 'true'
         working-directory: python-service
         run: |
           source venv/bin/activate
-      - name: Install dependencies
-        working-directory: python-service
-        run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
@@ -118,16 +114,6 @@ jobs:
         run: |
           echo "⏭️ No Python files changed in this PR"
           echo "✅ Python linting skipped - job will succeed"
-        working-directory: python-service
-        run: ruff check .
-
-      - name: Run Ruff formatter check
-        working-directory: python-service
-        run: ruff format --check . || (echo "❌ Code formatting check failed. Run 'ruff format .' to fix." && exit 1)
-
-      - name: Run MyPy type checker
-        working-directory: python-service
-        run: mypy .
 
   lint-summary:
     name: Lint Summary

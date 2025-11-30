@@ -1,0 +1,31 @@
+name: Enforce Merge Rules
+
+on:
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  restrict-merge:
+    name: Restrict Unauthorized Branches
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check source branch
+        id: check_branch
+        run: |
+          ALLOWED=("Dev-FrontEnd" "Dev-BackEnd")
+          SRC="${{ github.head_ref }}"
+
+          echo "🔍 PR Source Branch: $SRC"
+
+          if [[ ! " ${ALLOWED[@]} " =~ " $SRC " ]]; then
+            echo "❌ ERROR: Only Dev-FrontEnd and Dev-BackEnd may merge into main."
+            exit 1
+          fi
+
+          echo "✔️ Source branch allowed."

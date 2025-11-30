@@ -5,6 +5,7 @@ This module provides functions to construct search queries and prompts.
 The raw prompt strings are defined in search_prompts.py.
 """
 
+import json
 import logging
 import os
 import re
@@ -284,8 +285,6 @@ def transform_candidates(tavily_results: list[dict]) -> tuple[list[dict], str]:
     Returns:
         Tuple of (candidate_payload list, candidate_json string)
     """
-    import json
-
     candidate_payload = []
     for res in tavily_results:
         candidate_payload.append(

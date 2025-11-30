@@ -6,6 +6,7 @@ The actual prompt strings are defined in question_prompts.py.
 Also includes reusable utilities for schema preparation and Gemini configuration.
 """
 
+import logging
 import os
 from typing import Any, cast
 
@@ -78,25 +79,70 @@ def inline_schema_defs(json_schema: dict[str, Any]) -> dict[str, Any]:
     Gemini API doesn't support $defs or $ref references, so nested types
     need to be inlined directly into the schema structure.
 
+    This function recursively finds all $ref references and replaces them
+    with the actual definitions from $defs. Works with any schema structure.
+
     Args:
         json_schema: JSON schema dictionary that may contain $defs
 
     Returns:
         Modified schema with $defs inlined and removed
+
+    Raises:
+        KeyError: If a $ref references a definition that doesn't exist in $defs
     """
     if "$defs" not in json_schema:
         return json_schema
 
     # Create a copy to avoid mutating the original
     schema = json_schema.copy()
+    defs = schema["$defs"]
 
-    # Inline the Question definition from $defs into the items schema
-    question_def = schema["$defs"]["Question"]
-    if "properties" in schema and "questions" in schema["properties"]:
-        schema["properties"]["questions"]["items"] = question_def
+    def inline_refs(obj: Any) -> Any:
+        """
+        Recursively find and replace $ref references with actual definitions.
 
-    # Remove $defs
-    del schema["$defs"]
+        Args:
+            obj: Schema object (dict, list, or primitive)
+
+        Returns:
+            Object with $ref references replaced by actual definitions
+        """
+        if isinstance(obj, dict):
+            # Check if this dict is a $ref reference
+            if "$ref" in obj:
+                # Extract definition name from $ref (handles both "#/$defs/Name" and "Name")
+                # Always take the last part after splitting by "/"
+                ref_name = obj["$ref"].split("/")[-1]
+
+                if ref_name in defs:
+                    # Replace $ref with the actual definition, then recurse to handle nested refs
+                    return inline_refs(defs[ref_name])
+                else:
+                    # Reference not found - log warning but keep the $ref
+                    # This shouldn't happen with Pydantic schemas, but handle gracefully
+                    logger = logging.getLogger(__name__)
+                    logger.warning(
+                        f"$ref reference '{ref_name}' not found in $defs. Available: {list(defs.keys())}"
+                    )
+                    return obj
+
+            # Recursively process all values in the dict
+            return {k: inline_refs(v) for k, v in obj.items()}
+        elif isinstance(obj, list):
+            # Recursively process all items in the list
+            return [inline_refs(item) for item in obj]
+        else:
+            # Primitive type - return as-is
+            return obj
+
+    # Inline all $ref references
+    # Type cast: inline_refs returns Any, but we know it returns dict[str, Any] when given a dict
+    schema = cast(dict[str, Any], inline_refs(schema))
+
+    # Remove $defs after inlining (no longer needed)
+    if "$defs" in schema:
+        del schema["$defs"]
 
     return schema
 

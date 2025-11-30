@@ -14,6 +14,9 @@ import google.generativeai as genai
 from tavily import TavilyClient
 
 from models.search import LLMSearchResults
+
+# there are some common utilities for question and search services that are used in both
+from question_utils.question_helpers import clean_schema_for_gemini, inline_schema_defs
 from search_utils.search_helpers import (
     SEARCH_SYSTEM_PROMPT,
     SEARCH_USER_PROMPT_TEMPLATE,
@@ -102,53 +105,20 @@ async def _call_gemini_with_retry(
     # Remove $defs and example fields as Gemini doesn't support them
     json_schema = LLMSearchResults.model_json_schema()
 
-    # Remove $defs and inline nested types
-    if "$defs" in json_schema:
-        # Inline any nested definitions from $defs
-        defs = json_schema["$defs"]
+    try:
+        # Inline $defs references (Gemini doesn't support $ref)
+        json_schema = inline_schema_defs(json_schema)
 
-        # Find and replace $ref references with actual definitions
-        def inline_refs(obj):
-            if isinstance(obj, dict):
-                if "$ref" in obj:
-                    ref_path = obj["$ref"].split("/")[-1]
-                    if ref_path in defs:
-                        return inline_refs(defs[ref_path])
-                return {k: inline_refs(v) for k, v in obj.items()}
-            elif isinstance(obj, list):
-                return [inline_refs(item) for item in obj]
-            return obj
-
-        json_schema = inline_refs(json_schema)
-        # Remove $defs if still present
-        if "$defs" in json_schema:
-            del json_schema["$defs"]
-
-    # Remove fields that Gemini doesn't accept
-    # Gemini only accepts: type, properties, required, items
-    # It doesn't accept: example, title, description, minItems, maxItems, minLength, etc.
-    def clean_schema_for_gemini(obj):
-        """Recursively remove fields that Gemini doesn't support"""
-        if isinstance(obj, dict):
-            cleaned = {}
-            for k, v in obj.items():
-                # Keep all property names (they're part of the schema structure)
-                # But only keep essential JSON Schema metadata fields
-                if k == "properties":
-                    # Keep all property definitions, but clean their values
-                    cleaned[k] = {
-                        prop_name: clean_schema_for_gemini(prop_schema)
-                        for prop_name, prop_schema in v.items()
-                    }
-                elif k in ["type", "required", "items"]:
-                    cleaned[k] = clean_schema_for_gemini(v)
-                # Skip all other metadata fields (example, title, description, minItems, maxItems, etc.)
-            return cleaned
-        elif isinstance(obj, list):
-            return [clean_schema_for_gemini(item) for item in obj]
-        return obj
-
-    json_schema = clean_schema_for_gemini(json_schema)
+        # Remove fields that Gemini doesn't accept
+        # Gemini only accepts: type, properties, required, items
+        # It doesn't accept: example, title, description, minItems, maxItems, minLength, etc.
+        json_schema = clean_schema_for_gemini(json_schema)
+    except Exception as e:
+        logger.error(
+            '{"event": "schema_transformation_failed", "error": "%s"}',
+            str(e).replace('"', '\\"'),
+        )
+        raise ValueError(f"Schema transformation failed: {e}") from e
 
     for attempt in range(max_retries):
         try:
@@ -386,7 +356,6 @@ async def search_with_tavily(
     candidate_results = await _execute_tavily_search(
         tavily_client, search_query, max_candidates, loop
     )
-    # breakpoint()
 
     if not candidate_results:
         return {

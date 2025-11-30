@@ -80,7 +80,7 @@ jobs:
         working-directory: python-service
         run: python -m venv venv
 
-      - name: Install dependencies
+      - name: Activate virtual environment and install dependencies
         if: steps.check_python.outputs.python_changed == 'true'
         working-directory: python-service
         run: |

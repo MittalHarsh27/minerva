@@ -199,7 +199,7 @@ async function handleSubmit(event) {
       // Check if it's a duplicate key error (user already has profile)
       if (error.code === '23505') {
         // Profile already exists, update it instead
-        const { data: updateData, error: updateError } = await supabaseClient
+        const { error: updateError } = await supabaseClient
           .from('user_profiles')
           .update({
             name: name,

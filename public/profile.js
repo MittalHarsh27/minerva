@@ -183,7 +183,7 @@ async function handleSubmit(event) {
     const livesInUs = document.getElementById('livesInUs').checked;
 
     // Insert profile into database
-    const { data, error } = await supabaseClient
+    const { error } = await supabaseClient
       .from('user_profiles')
       .insert({
         id: session.user.id,

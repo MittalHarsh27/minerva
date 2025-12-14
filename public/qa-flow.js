@@ -323,7 +323,6 @@ function displayResultFlashcards(searchResults, error = null, sessionId = null) 
   chatContainer.appendChild(resultsContainer);
 
   const container = resultsContainer.querySelector('#resultsFlashcardContainer');
-  let currentResultIndex = 0;
   const likedResults = [];
   const dislikedResults = [];
   const resultStatusMap = new Map(); // Track which results were liked/disliked

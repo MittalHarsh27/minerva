@@ -74,7 +74,7 @@ if (insertError) {
 
 // Test 3: Check RLS policies
 console.log('\nTest 3: Checking table structure...');
-const { data: tableInfo, error: tableError } = await supabase
+const { error: tableError } = await supabase
   .from('user_sessions')
   .select('*')
   .limit(0);

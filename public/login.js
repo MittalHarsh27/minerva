@@ -103,7 +103,7 @@ async function handleGoogleLogin() {
   }
 
   try {
-    const { data, error } = await supabaseClient.auth.signInWithOAuth({
+    const { error } = await supabaseClient.auth.signInWithOAuth({
       provider: 'google',
       options: {
         redirectTo: `${window.location.origin}/auth-callback.html`

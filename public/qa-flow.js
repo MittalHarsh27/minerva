@@ -35,7 +35,6 @@ function displayQuestionFlashcards(questions, sessionId) {
   chatContainer.appendChild(flashcardContainer);
 
   const container = flashcardContainer.querySelector(`#flashcardContainer-${flashcardSessionId}`);
-  let currentQuestionIndex = 0;
   const selectedAnswers = {};
 
   // Function to show current question (or answer summary when done)

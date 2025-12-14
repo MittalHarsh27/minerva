@@ -267,18 +267,6 @@ function handleAnswersSubmitted(sessionId, answers, result) {
   }, 2000);
 }
 
-// Retry last query from error message button
-function retryLastQuery() {
-  if (lastQuery) {
-    // Remove the error message before retrying
-    const errorMessages = document.querySelectorAll('.error');
-    if (errorMessages.length > 0) {
-      errorMessages[errorMessages.length - 1].closest('.message').remove();
-    }
-    processQuery(lastQuery);
-  }
-}
-
 // Display results as flashcards (one at a time)
 function displayResultFlashcards(searchResults, error = null, sessionId = null) {
   // Get sessionId from parameter or fallback to global state

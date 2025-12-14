@@ -30,7 +30,7 @@ const supabase = createClient(supabaseUrl, supabaseServiceKey, {
 // Test 1: Check connection
 console.log('Test 1: Checking connection...');
 try {
-  const { data, error } = await supabase.from('user_sessions').select('count').limit(1);
+  const { error } = await supabase.from('user_sessions').select('count').limit(1);
   if (error) {
     console.error('❌ Connection error:', error);
   } else {

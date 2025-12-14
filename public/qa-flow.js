@@ -270,10 +270,8 @@ function handleAnswersSubmitted(sessionId, answers, result) {
 // Display results as flashcards (one at a time)
 function displayResultFlashcards(searchResults, error = null, sessionId = null) {
   // Get sessionId from parameter or fallback to global state
-  if (!sessionId) {
-    sessionId = currentSessionId || window.currentSessionId;
-  }
-
+  sessionId = sessionId || currentSessionId || window.currentSessionId;
+  
   if (!sessionId) {
     console.error('displayResultFlashcards: No sessionId available');
     sessionId = 'unknown'; // Fallback to prevent template errors

@@ -35,7 +35,6 @@ function displayQuestionFlashcards(questions, sessionId) {
   chatContainer.appendChild(flashcardContainer);
 
   const container = flashcardContainer.querySelector(`#flashcardContainer-${flashcardSessionId}`);
-  let currentQuestionIndex = 0;
   const selectedAnswers = {};
 
   // Function to show current question (or answer summary when done)
@@ -188,11 +187,30 @@ async function submitFlashcardAnswers(sessionId, answers) {
   updateStatus('Submitting answers...', 'loading');
 
   try {
+    // Get auth token and add to headers
+    let headers = {
+      'Content-Type': 'application/json',
+    };
+    
+    // Add Authorization header if authenticated
+    if (window.supabase && window.SUPABASE_CONFIG) {
+      try {
+        const supabase = window.supabase.createClient(
+          window.SUPABASE_CONFIG.url,
+          window.SUPABASE_CONFIG.anonKey
+        );
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session?.access_token) {
+          headers['Authorization'] = `Bearer ${session.access_token}`;
+        }
+      } catch (error) {
+        console.error('Error getting auth token:', error);
+      }
+    }
+    
     const response = await fetch(`${API_BASE}/submit-answers`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      headers: headers,
       body: JSON.stringify({
         sessionId,
         answers,
@@ -249,25 +267,11 @@ function handleAnswersSubmitted(sessionId, answers, result) {
   }, 2000);
 }
 
-// Retry last query from error message button
-function retryLastQuery() {
-  if (lastQuery) {
-    // Remove the error message before retrying
-    const errorMessages = document.querySelectorAll('.error');
-    if (errorMessages.length > 0) {
-      errorMessages[errorMessages.length - 1].closest('.message').remove();
-    }
-    processQuery(lastQuery);
-  }
-}
-
 // Display results as flashcards (one at a time)
 function displayResultFlashcards(searchResults, error = null, sessionId = null) {
   // Get sessionId from parameter or fallback to global state
-  if (!sessionId) {
-    sessionId = currentSessionId || window.currentSessionId;
-  }
-
+  sessionId = sessionId || currentSessionId || window.currentSessionId;
+  
   if (!sessionId) {
     console.error('displayResultFlashcards: No sessionId available');
     sessionId = 'unknown'; // Fallback to prevent template errors
@@ -317,7 +321,6 @@ function displayResultFlashcards(searchResults, error = null, sessionId = null) 
   chatContainer.appendChild(resultsContainer);
 
   const container = resultsContainer.querySelector('#resultsFlashcardContainer');
-  let currentResultIndex = 0;
   const likedResults = [];
   const dislikedResults = [];
   const resultStatusMap = new Map(); // Track which results were liked/disliked

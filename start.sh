@@ -59,12 +59,46 @@ fi
 
 echo -e "${GREEN}✅ Dependencies ready!${NC}\n"
 
+# Kill existing servers if running
+echo -e "${BLUE}🧹 Checking for existing servers...${NC}"
+
+# Kill Python service on port 8000
+PYTHON_PIDS=$(lsof -ti:8000 2>/dev/null || true)
+if [ -n "$PYTHON_PIDS" ]; then
+    echo -e "${YELLOW}   Stopping existing Python service on port 8000...${NC}"
+    kill -9 $PYTHON_PIDS 2>/dev/null || true
+    sleep 1
+    echo -e "${GREEN}   ✅ Python service stopped${NC}"
+fi
+
+# Kill Node.js service on port 3001
+NODE_PIDS=$(lsof -ti:3001 2>/dev/null || true)
+if [ -n "$NODE_PIDS" ]; then
+    echo -e "${YELLOW}   Stopping existing Node.js service on port 3001...${NC}"
+    kill -9 $NODE_PIDS 2>/dev/null || true
+    sleep 1
+    echo -e "${GREEN}   ✅ Node.js service stopped${NC}"
+fi
+
+if [ -n "$PYTHON_PIDS" ] || [ -n "$NODE_PIDS" ]; then
+    echo ""
+fi
+
 # Start Python service in background (with JSON logging)
 echo -e "${BLUE}🐍 Starting Python service on port 8000...${NC}"
-echo -e "${YELLOW}   Command: cd python-service && ./venv/bin/python3 -m uvicorn main:app --host 0.0.0.0 --port 8000 --log-config logging.json${NC}"
 cd python-service
-# Use venv's python directly
-./venv/bin/python3 -m uvicorn main:app --host 0.0.0.0 --port 8000 --log-config logging.json &
+
+# Check if venv exists, otherwise use system python3
+if [ -f "./venv/bin/python3" ]; then
+    PYTHON_CMD="./venv/bin/python3"
+    echo -e "${YELLOW}   Using virtual environment Python${NC}"
+else
+    PYTHON_CMD="python3"
+    echo -e "${YELLOW}   Using system Python (venv not found)${NC}"
+fi
+
+echo -e "${YELLOW}   Command: $PYTHON_CMD -m uvicorn main:app --host 0.0.0.0 --port 8000 --log-config logging.json${NC}"
+$PYTHON_CMD -m uvicorn main:app --host 0.0.0.0 --port 8000 --log-config logging.json &
 PYTHON_PID=$!
 cd ..
 

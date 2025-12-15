@@ -7,7 +7,7 @@ This directory contains git hooks that are automatically run before commits.
 Run the setup script from the repository root:
 
 ```bash
-./setup-pre-commit.sh
+./scripts/setup-pre-commit.sh
 ```
 
 Or manually:

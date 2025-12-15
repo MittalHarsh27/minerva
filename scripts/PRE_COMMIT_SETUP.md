@@ -7,7 +7,7 @@ To share pre-commit hooks with your team, commit these files:
 ### Required Files (Must Commit):
 
 1. **`.githooks/pre-commit`** - The actual hook script
-2. **`setup-pre-commit.sh`** - Setup script for new contributors
+2. **`scripts/setup-pre-commit.sh`** - Setup script for new contributors
 3. **`python-service/ruff.toml`** - Ruff configuration
 4. **`python-service/mypy.ini`** - Mypy configuration
 5. **`python-service/requirements.txt`** - Includes ruff and mypy dependencies
@@ -27,7 +27,7 @@ pip install -r requirements.txt
 cd ..
 
 # 2. Set up git hooks
-./setup-pre-commit.sh
+./scripts/setup-pre-commit.sh
 ```
 
 That's it! The hooks will now run automatically on every commit.
@@ -75,6 +75,6 @@ If hooks aren't running:
 
 3. Re-run setup:
    ```bash
-   ./setup-pre-commit.sh
+   ./scripts/setup-pre-commit.sh
    ```
 
